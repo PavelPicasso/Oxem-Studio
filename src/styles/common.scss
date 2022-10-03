@@ -1,0 +1,14 @@
+@import './variables.scss';
+
+@import '../fonts/Gilroy/stylesheet.css';
+@import '../fonts/Nekst-Black/stylesheet.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  font: 15px Nekst-Black, sans-serif;
+  
+  height: 100%;
+}
