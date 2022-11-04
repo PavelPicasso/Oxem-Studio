@@ -1,5 +1,6 @@
 import './CardItem.scss';
 import React, { useEffect, useState } from "react";
+import { prettyfy } from '../../service/PrettifyTxt';
 
 type CardItemState = {
     value: number;
@@ -33,7 +34,7 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
 
     useEffect(() => {
         if (after === 'input') {
-            setCard({...card, value: ((currentValue * card.percent) / 100)});
+            setCard(state => ({...state, value: ((currentValue * card.percent) / 100)}));
         }
     }, [currentValue, card.percent]);
 
@@ -61,7 +62,7 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
         }
     }
 
-    const updateInputValuePer = (value: number) => {
+    const handleChangeValue = (value: number) => {
         if (after === 'input') {
             const per = Math.round((Number(value) * 100) / currentValue);
             const perMoney = (currentValue * per) / 100;
@@ -74,7 +75,7 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
         if (after === '₽') {
             setCard({...card, value: value});
 
-            handleUpdateValue(value, (currentValue * card.percent) / 100);
+            handleUpdateValue(value, (value * card.percent) / 100);
         } 
 
         if (after === 'мес.') {
@@ -83,11 +84,6 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
             handleUpdateValue(value);
         }
     }
-
-    const prettyfy = (num: number) => {
-        const separator = " ";
-        return num.toString().replace(/(\d{1,3}(?=(?:\d\d\d)+(?!\d)))/g, "$1" + separator);
-    };
 
     const checkPrettyfyValue = () => {
         return card.typeOfFocused === 'text' ? prettyfy(card.value) : card.value;
@@ -98,32 +94,88 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
     }
 
     const setMinValue = (min: number) => {
-        return after !== 'input'? min: (currentValue * min) / 100;
+        return after !== 'input'? min : (currentValue * min) / 100;
     }
 
     const setMaxValue = (max: number) => {
-        return after !== 'input'? max: (currentValue * max) / 100;
+        return after !== 'input'? max : (currentValue * max) / 100;
+    }
+
+    const checkExtremePercent = (value: number) => {
+        if (value > max) {
+            setCard({...card, percent: max, percentFocused: false});
+
+            handleUpdateValue((currentValue * max) / 100);
+        } else {
+            if (value < min) {
+                setCard({...card, percent: min, percentFocused: false});
+
+                handleUpdateValue((currentValue * min) / 100);
+            } else {
+                setCard({...card, percent: value, percentFocused: false});
+
+                handleUpdateValue((currentValue * value) / 100);
+            }
+        }
     }
 
     const checkExtreme = (value: number) => {
+
         if (after === 'input') {
+            const PerMoneyMin = setMaxValue(min);
+            const PerMoneyMax = setMaxValue(max);
             
-        } 
+            if (value > PerMoneyMax) {
+                setCard({...card, value: PerMoneyMax, percent: max, typeOfFocused: 'text'});
+
+                handleUpdateValue(PerMoneyMax);
+            } else {
+                if (value < PerMoneyMin) {
+                    setCard({...card, value: PerMoneyMin, percent: min, typeOfFocused: 'text'});
+
+                    handleUpdateValue(PerMoneyMin);
+                } else {
+                    setCard({...card, value: value, typeOfFocused: 'text'});
+
+                    handleUpdateValue(value);
+                }
+            }
+        }
 
         if (after === '₽') {
             if (value > max) {
-                setCard({...card, value: 1});
+                setCard({...card, value: max, typeOfFocused: 'text'});
+
+                handleUpdateValue(max, (max * card.percent) / 100);
             } else {
                 if (value < min) {
-                    setCard({...card, value: min});
+                    setCard({...card, value: min, typeOfFocused: 'text'});
+
+                    handleUpdateValue(min, (min * card.percent) / 100);
                 } else {
-                    setCard({...card, value: value});
+                    setCard({...card, value: value, typeOfFocused: 'text'});
+
+                    handleUpdateValue(value, (value * card.percent) / 100);
                 }
             }
         } 
 
         if (after === 'мес.') {
+            if (value > max) {
+                setCard({...card, value: max, typeOfFocused: 'text'});
 
+                handleUpdateValue(max);
+            } else {
+                if (value < min) {
+                    setCard({...card, value: min, typeOfFocused: 'text'});
+
+                    handleUpdateValue(min);
+                } else {
+                    setCard({...card, value: value, typeOfFocused: 'text'});
+
+                    handleUpdateValue(value);
+                }
+            }
         }
     }
 
@@ -143,8 +195,8 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
                         max={setMaxValue(max)}
                         value={checkPrettyfyValue()}
                         onFocus={e => {setCard({...card, typeOfFocused: 'number'})}}
-                        onBlur={e => {setCard({...card, typeOfFocused: 'text'})}}
-                        onChange={e => {updateInputValuePer(Number(e.target.value))}}
+                        onBlur={e => checkExtreme(Number(e.target.value))}
+                        onChange={e => {handleChangeValue(Number(e.target.value))}}
                     />
 
                     {after === 'input'? (
@@ -153,9 +205,10 @@ export const CardItem: React.FC<CardItemProps> = ({min, max, step, title, after,
                             className='input__percent'
                             min={min}
                             max={max}
+                            step={step}
                             value={checkPrettyfyPercent()}
                             onFocus={e => {setCard({...card, percentFocused: true})}}
-                            onBlur={e => {setCard({...card, percentFocused: false})}}
+                            onBlur={e => {checkExtremePercent(Number(e.target.value))}}
                             onChange={e => {
                                     setCard({...card, percent: Number(e.target.value)});
 
